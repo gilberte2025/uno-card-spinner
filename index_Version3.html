@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>UNO Card Spinner</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+    }
+    #wheel-container {
+      position: relative;
+      width: 500px;
+      height: 500px;
+    }
+    #wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 5px solid #333;
+      position: relative;
+      overflow: hidden;
+    }
+    #pointer {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 30px solid #e63946; /* Pointing downward */
+      z-index: 10;
+    }
+    #spin {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      background: #e63946;
+      color: white;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .slice-text {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: 50% 50%;
+      font-size: 10px;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="wheel-container">
+    <div id="pointer"></div>
+    <div id="wheel"></div>
+  </div>
+  <button id="spin">Spin 🎡</button>
+  <div id="result"></div>
+
+  <audio id="tick-sound" src="https://actions.google.com/sounds/v1/alarms/click_clock.ogg" preload="auto"></audio>
+
+  <script>
+    // Build UNO deck without Wild Draw Four
+    const colors = ["Red", "Yellow", "Green", "Blue"];
+    let deck = [];
+
+    colors.forEach(color => {
+      // 0 card
+      deck.push(`${color} 0`);
+      // 1-9 twice each
+      for (let i = 1; i <= 9; i++) {
+        deck.push(`${color} ${i}`);
+        deck.push(`${color} ${i}`);
+      }
+      // 2 skips, reverses, draw twos
+      for (let i = 0; i < 2; i++) {
+        deck.push(`${color} Skip`);
+        deck.push(`${color} Reverse`);
+        deck.push(`${color} Draw Two`);
+      }
+    });
+
+    // Only 4 wilds (no Wild Draw Fours)
+    for (let i = 0; i < 4; i++) {
+      deck.push("Wild");
+    }
+
+    const wheel = document.getElementById("wheel");
+    const sliceCount = deck.length;
+    const sliceAngle = 360 / sliceCount;
+
+    // Function to get slice color based on card
+    function getSliceColor(card) {
+      if (card.startsWith("Red")) return "#e63946";
+      if (card.startsWith("Yellow")) return "#fcbf49";
+      if (card.startsWith("Green")) return "#2a9d8f";
+      if (card.startsWith("Blue")) return "#264653";
+      return "#000000"; // wilds
+    }
+
+    // Draw wheel slices with text
+    deck.forEach((card, i) => {
+      const slice = document.createElement("div");
+      slice.style.position = "absolute";
+      slice.style.width = "50%";
+      slice.style.height = "50%";
+      slice.style.background = getSliceColor(card);
+      slice.style.transformOrigin = "100% 100%";
+      slice.style.transform = `rotate(${i * sliceAngle}deg) skewY(${90 - sliceAngle}deg)`;
+      wheel.appendChild(slice);
+
+      // Add text label for each slice
+      const text = document.createElement("div");
+      text.className = "slice-text";
+      text.textContent = card;
+      text.style.transform = `rotate(${i * sliceAngle + sliceAngle / 2}deg)`;
+      wheel.appendChild(text);
+    });
+
+    let currentRotation = 0;
+    const tickSound = document.getElementById("tick-sound");
+    let tickingInterval;
+
+    // Spin functionality
+    document.getElementById("spin").addEventListener("click", () => {
+      clearInterval(tickingInterval);
+      const chosenIndex = Math.floor(Math.random() * deck.length);
+      const chosenAngle = chosenIndex * sliceAngle + sliceAngle / 2;
+      const targetRotation = 360 * 8 + (360 - chosenAngle); // 8 full turns for more suspense
+
+      currentRotation += targetRotation;
+      wheel.style.transition = "transform 7s ease-out"; // Longer spin duration
+      wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+      let tickDelay = 80; // starting speed for tick
+      let elapsed = 0;
+      const spinDuration = 7000;
+
+      tickingInterval = setInterval(() => {
+        tickSound.currentTime = 0;
+        tickSound.play();
+
+        // Gradually slow down ticking
+        elapsed += tickDelay;
+        tickDelay += 5; // increase delay slightly each tick
+
+        clearInterval(tickingInterval);
+        if (elapsed < spinDuration) {
+          tickingInterval = setInterval(() => {
+            tickSound.currentTime = 0;
+            tickSound.play();
+          }, tickDelay);
+        }
+      }, tickDelay);
+
+      setTimeout(() => {
+        clearInterval(tickingInterval);
+        const chosenCard = deck[chosenIndex];
+        document.getElementById("result").textContent = `You drew: ${chosenCard}`;
+      }, spinDuration);
+    });
+  </script>
+</body>
+</html>
