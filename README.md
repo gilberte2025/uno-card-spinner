@@ -1,2 +1,1 @@
 # uno-card-spinner
-README
